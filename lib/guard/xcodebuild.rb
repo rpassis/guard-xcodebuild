@@ -5,7 +5,7 @@ require_relative './xcodebuild_util'
 module Guard
   class Xcodebuild < Plugin
     include XcodebuildUtil
-    attr_reader :xcodebuild, :test_paths, :test_target, :cli, :args, :all_on_start
+    attr_reader :xcodebuild, :test_paths, :test_target, :file_args, :args, :all_on_start
 
     # Initializes a Guard plugin.
     # Don't do any work here, especially as Guard plugins get initialized even if they are not in an active group!
@@ -17,8 +17,8 @@ module Guard
     #
     def initialize(options = {})
       super
-      @args = load_args      
-      @cli = options[:cli]
+      @file_args = load_args      
+      @args = options[:args]
       @test_paths = options[:test_paths]    || "."
       @test_target = options[:test_target]  || find_test_target
       @xcodebuild = options[:xcodebuild_command] || "xcodebuild"
@@ -112,8 +112,8 @@ module Guard
     def xcodebuild_command(command)
       commands = []
       commands << xcodebuild
+      commands << file_args if file_args && file_args.strip != ""
       commands << args if args && args.strip != ""
-      commands << cli if cli && cli.strip != ""
       commands << command
       commands << "| xcpretty"
       unless ok = system(commands.join(" "))
