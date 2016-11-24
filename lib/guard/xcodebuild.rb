@@ -35,7 +35,7 @@ module Guard
         UI.error "xcodebuild not found, please specify :xcodebuild_command option"
         throw :task_has_failed
       end
-
+      
       unless test_target
         UI.error "Cannot find test target, please specify :test_target option"
         throw :task_has_failed
