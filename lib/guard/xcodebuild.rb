@@ -5,7 +5,7 @@ require_relative './xcodebuild_util'
 module Guard
   class Xcodebuild < Plugin
     include XcodebuildUtil
-    attr_reader :xcodebuild, :test_paths, :test_target, :cli, :all_on_start
+    attr_reader :xcodebuild, :test_paths, :test_target, :cli, :args, :all_on_start
 
     # Initializes a Guard plugin.
     # Don't do any work here, especially as Guard plugins get initialized even if they are not in an active group!
@@ -17,8 +17,8 @@ module Guard
     #
     def initialize(options = {})
       super
-      
-      @cli = options[:cli] || load_args
+      @args = load_args      
+      @cli = options[:cli]
       @test_paths = options[:test_paths]    || "."
       @test_target = options[:test_target]  || find_test_target
       @xcodebuild = options[:xcodebuild_command] || "xcodebuild"
@@ -90,9 +90,9 @@ module Guard
     def run_on_modifications(paths)
       test_files = test_classes_with_paths(paths, test_paths)
       if test_files.size > 0
-        filenames = test_files.join(",")
-        UI.info "Running tests on classes: #{filenames}"
-        xcodebuild_command("test -only-testing:#{test_target}/#{filenames}")
+        modified_files = test_files.map { |f| "-only-testing:#{test_target}/#{f}" }.join(",")
+        UI.info "Running tests on classes: #{modified_files}"
+        xcodebuild_command("test #{modified_files}")
       else
         run_all
       end
@@ -112,8 +112,10 @@ module Guard
     def xcodebuild_command(command)
       commands = []
       commands << xcodebuild
+      commands << args if args && args.strip != ""
       commands << cli if cli && cli.strip != ""
       commands << command
+      commands << "| xcpretty"
       unless ok = system(commands.join(" "))
         throw :task_has_failed
       end

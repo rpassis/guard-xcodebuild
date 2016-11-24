@@ -3,7 +3,7 @@ require 'JSON'
 
 module Guard
   module XcodebuildUtil
-    TEST_FILE_REGEXP = /(Test|Spec)\.(m|m|swift)$/
+    TEST_FILE_REGEXP = /(Test|Spec)\.(m|swift)$/
     XCODEBUILD_ARGS = '.xcodebuild-args'
     # Find test class from input paths.
     # 
@@ -32,9 +32,8 @@ module Guard
       class_name = classname_with_file(file)
       # for each test path, check if we can find corresponding test file
       test_paths.each do |path|
-        files = Dir.glob("#{path}/**/#{class_name}*.*").select {|file| file =~ /#{class_name}(Test|Spec)\.(m|mm)$/ }
-        first_file = files.first
-        return first_file if first_file
+        files = Dir.glob("#{path}/**/#{class_name}*.*").select {|file| file =~ /#{class_name}(Test|Spec)\.(m|swift)$/ }
+        return files.first
       end
       return nil
     end
@@ -51,14 +50,22 @@ module Guard
 
     def load_args
       return unless File.file?(XCODEBUILD_ARGS)
-      args = JSON.parse(f.read) if f = File.open(XCODEBUILD_ARGS)
-      parse_args(args)
+      if f = File.open(XCODEBUILD_ARGS)
+        args = JSON.parse(f.read)
+        parse_args(args)
+      end
     end
 
     protected
 
+    # Example "ProjectName/Model/User+CoreDataExtensions.swift"
+    # The first regex strips the file extension and the second removes 
+    # any non alphanumeric characters.
+    # The above example would return UserCoreDataExtensions so if a testing
+    # file named UserCoreDataExtensions(Spec|Test).swift is found, we are
+    # in business
     def classname_with_file(path)
-      path.split("/").last.gsub(/(\.(.+))$/, "")
+      path.split("/").last.gsub(/(\.(.+))$|[^0-9a-z ]/i, "")
     end
 
     private
