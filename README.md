@@ -1,41 +1,103 @@
-# Guard::Xctool
+# guard-xcodebuild
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/guard/xctool`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+guard-xcodebuild automatically and selectively runs your tests when your Xcode files are modified
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
-```ruby
-gem 'guard-xctool'
-```
+    gem 'guard', '~> 2.0'
+    gem 'guard-xcodebuild'
 
-And then execute:
+And then bundle it:
 
     $ bundle
 
-Or install it yourself as:
+Or install the gem:
 
-    $ gem install guard-xctool
+    $ gem install guard-xcodebuild
 
-## Usage
+## Dependency
 
-TODO: Write usage instructions here
+- Ruby >2
+- [xcodebuild](https://github.com/facebook/xcodebuild)
+- Guard 2.x
 
-## Development
+## How to Use
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+1) Install xcodebuild with `brew install xcodebuild`
+2) Create an `.xcodebuild-args` file in your project root passing the parameters relevant to your project. Here's an example:
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```
+[
+  "-workspace", "YourProject.xcworkspace",
+  "-scheme", "YourSchemeName",
+  "-configuration", "Debug",
+  "-sdk", "iphonesimulator",
+  "-destination", "platform=iOS Simulator,name=iPhone 7 Plus"
+]
+```
+
+3) Configure your Guardfile
+
+
+```ruby
+directories %w(YourApp YourAppTests) \
+.select{|d| Dir.exists?(d) ? d : UI.warning("Directory #{d} does not exist")}
+
+guard 'xcodebuild' do
+  watch(/(.*).(m|mm|swift)/)
+end
+```
+
+4) Run `guard`
+
+## Options
+
+By default, xcodebuild find the folder for projects and find a target that look like test.
+You can supply your target by using ```test_target``` option.
+
+```ruby
+guard 'xcodebuild', :test_target => 'YourAppTests' do
+  watch(...)
+end
+```
+
+By default, xcodebuild check all files under current folder for tests. You can specify a
+specific folder, or array of folders, as test path.
+
+```ruby
+guard 'xcodebuild', :test_paths => 'YourAppTests' do
+  watch(...)
+end
+```
+
+```ruby
+guard 'xcodebuild', :test_paths => ['YourAppUITests', 'YourAppTests'] do
+  watch(...)
+end
+```
+
+You can pass any of the standard xcodebuild CLI options using the ```:cli``` option:
+
+```ruby
+guard 'xcodebuild', :cli => '-workspace A.workspace' do
+  watch(...)
+end
+```
+
+You might specify the full path to the xcodebuild with ```:xcodebuild```  option:
+
+```ruby
+guard 'xcodebuild', :xcodebuild => '/usr/local/bin/xcodebuild' do
+  watch(...)  
+end
+```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/guard-xctool.
-
-
-## License
-
-The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-
+1. Fork it
+2. Create your feature branch (`git checkout -b my-new-feature`)
+3. Commit your changes (`git commit -am 'Add some feature'`)
+4. Push to the branch (`git push origin my-new-feature`)
+5. Create new Pull Request

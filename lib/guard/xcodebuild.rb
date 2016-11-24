@@ -1,8 +1,12 @@
-require "guard/xctool/version"
+require "guard/xcodebuild/version"
 require 'guard/compat/plugin'
+require_relative './xcodebuild_util'
 
 module Guard
-  class Xctool < Plugin
+  class Xcodebuild < Plugin
+    include XcodebuildUtil
+    attr_reader :xcodebuild, :test_paths, :test_target, :cli, :all_on_start
+
     # Initializes a Guard plugin.
     # Don't do any work here, especially as Guard plugins get initialized even if they are not in an active group!
     #
@@ -13,6 +17,12 @@ module Guard
     #
     def initialize(options = {})
       super
+      
+      @cli = options[:cli] || load_args
+      @test_paths = options[:test_paths]    || "."
+      @test_target = options[:test_target]  || find_test_target
+      @xcodebuild = options[:xcodebuild_command] || "xcodebuild"
+      @all_on_start = options[:all_on_start] || false      
     end
 
     # Called once when Guard starts. Please override initialize method to init stuff.
@@ -21,6 +31,17 @@ module Guard
     # @return [Object] the task result
     #
     def start
+      unless system("which #{xcodebuild}")
+        UI.error "xcodebuild not found, please specify :xcodebuild_command option"
+        throw :task_has_failed
+      end
+
+      unless test_target
+        UI.error "Cannot find test target, please specify :test_target option"
+        throw :task_has_failed
+      end
+
+      run_all if all_on_start      
     end
 
     # Called when `stop|quit|exit|s|q|e + enter` is pressed (when Guard quits).
@@ -47,6 +68,8 @@ module Guard
     # @return [Object] the task result
     #
     def run_all
+      UI.info "Running all tests..."
+      xcodebuild_command("test")
     end
 
     # Called on file(s) additions that the Guard plugin watches.
@@ -65,6 +88,14 @@ module Guard
     # @return [Object] the task result
     #
     def run_on_modifications(paths)
+      test_files = test_classes_with_paths(paths, test_paths)
+      if test_files.size > 0
+        filenames = test_files.join(",")
+        UI.info "Running tests on classes: #{filenames}"
+        xcodebuild_command("test -only-testing:#{test_target}/#{filenames}")
+      else
+        run_all
+      end
     end
 
     # Called on file(s) removals that the Guard plugin watches.
@@ -75,5 +106,17 @@ module Guard
     #
     def run_on_removals(paths)
     end    
+
+    private
+
+    def xcodebuild_command(command)
+      commands = []
+      commands << xcodebuild
+      commands << cli if cli && cli.strip != ""
+      commands << command
+      unless ok = system(commands.join(" "))
+        throw :task_has_failed
+      end
+    end
   end
 end

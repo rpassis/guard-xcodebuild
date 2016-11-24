@@ -1,0 +1,6 @@
+directories %w(YourApp YourAppTests) \
+.select{|d| Dir.exists?(d) ? d : UI.warning("Directory #{d} does not exist")}
+
+guard 'xcodebuild' do
+  watch(/(.*).(m|swift)/)
+end
