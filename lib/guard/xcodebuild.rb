@@ -116,7 +116,7 @@ module Guard
       commands << args if args && args.strip != ""
       commands << command
       commands << "| xcpretty"
-      if system(commands.join(" "))
+      if system(commands.join(" ")) == true
         system("terminal-notifier -message 'ok'")
       else
         system("terminal-notifier -message 'fail'")
