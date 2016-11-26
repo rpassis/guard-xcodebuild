@@ -116,7 +116,10 @@ module Guard
       commands << args if args && args.strip != ""
       commands << command
       commands << "| xcpretty"
-      unless ok = system(commands.join(" "))
+      if ok = system(commands.join(" "))
+        system("terminal-notifier -message 'ok'")
+      else
+        system("terminal-notifier -message 'fail'")
         throw :task_has_failed
       end
     end
