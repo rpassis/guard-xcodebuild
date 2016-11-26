@@ -1,5 +1,5 @@
 require 'xcodeproj'
-require 'JSON'
+require 'json'
 
 module Guard
   module XcodebuildUtil
