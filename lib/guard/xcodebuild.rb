@@ -127,7 +127,7 @@ module Guard
       xcodebuild_test_result = system(final_command)
       unless disable_notifier == true
         notification_message = xcodebuild_test_result == true ? "All tests passed" : "One or more tests have failed"
-        system("terminal-notifier -message #{notification_message}")
+        system("terminal-notifier -message '#{notification_message}''")
       end
       throw :task_has_failed if xcodebuild_test_result == false
     end
