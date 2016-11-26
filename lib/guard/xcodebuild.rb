@@ -5,7 +5,7 @@ require_relative './xcodebuild_util'
 module Guard
   class Xcodebuild < Plugin
     include XcodebuildUtil
-    attr_reader :xcodebuild, :test_paths, :test_target, :file_args, :args, :all_on_start
+    attr_reader :test_paths, :test_target, :file_args, :args, :all_on_start, :notifier, :disable_notifier
 
     # Initializes a Guard plugin.
     # Don't do any work here, especially as Guard plugins get initialized even if they are not in an active group!
@@ -21,8 +21,9 @@ module Guard
       @args = options[:args]
       @test_paths = options[:test_paths]    || "."
       @test_target = options[:test_target]  || find_test_target
-      @xcodebuild = options[:xcodebuild_command] || "xcodebuild"
-      @all_on_start = options[:all_on_start] || false      
+      @all_on_start = options[:all_on_start] || false
+      @notifier = options[:notifier] || "terminal-notifier"   
+      @disable_notifier = options[:disable_notifier] || false   
     end
 
     # Called once when Guard starts. Please override initialize method to init stuff.
@@ -31,16 +32,21 @@ module Guard
     # @return [Object] the task result
     #
     def start
-      unless system("which #{xcodebuild}")
-        UI.error "xcodebuild not found, please specify :xcodebuild_command option"
+      unless system("which xcodebuild")
+        UI.error "xcodebuild not found, please install Xcode then try again"
         throw :task_has_failed
       end
-      
+
+      unless system("which #{notifier}") || disable_notifier == true      
+        UI.error "#{notifier} not found, please install it or disable the notifier by adding the disable_notifier option to your Guardfile"
+        throw :task_has_failed
+      end
+
       unless test_target
         UI.error "Cannot find test target, please specify :test_target option"
         throw :task_has_failed
       end
-
+      
       run_all if all_on_start      
     end
 
@@ -69,7 +75,7 @@ module Guard
     #
     def run_all
       UI.info "Running all tests..."
-      xcodebuild_command("test")
+      xcodebuild_command
     end
 
     # Called on file(s) additions that the Guard plugin watches.
@@ -92,7 +98,7 @@ module Guard
       if test_files.size > 0
         modified_files = test_files.map { |f| "-only-testing:#{test_target}/#{f}" }.join(",")
         UI.info "Running tests on classes: #{modified_files}"
-        xcodebuild_command("test #{modified_files}")
+        xcodebuild_command("#{modified_files}")
       else
         run_all
       end
@@ -109,19 +115,21 @@ module Guard
 
     private
 
-    def xcodebuild_command(command)
-      commands = ["set -o pipefail;"]
-      commands << xcodebuild
+    def xcodebuild_command(command = nil)
+      # Pipefail is required so the xcpretty pipe doesnt swallow xcodebuild errors
+      commands = ["set -o pipefail; xcodebuild test"]  
       commands << file_args if file_args && file_args.strip != ""
       commands << args if args && args.strip != ""
-      commands << command
+      commands << command if command && command.strip != ""
       commands << "| xcpretty"
-      if system(commands.join(" ")) == true
-        system("terminal-notifier -message 'ok'")
-      else
-        system("terminal-notifier -message 'fail'")
-        throw :task_has_failed
+      final_command = commands.join(" ")
+      UI.info("Running xcodebuild: #{final_command}")
+      xcodebuild_test_result = system(final_command)
+      unless disable_notifier == true
+        notification_message = xcodebuild_test_result == true ? "All tests passed" : "One or more tests have failed"
+        system("terminal-notifier -message #{notification_message}")
       end
+      throw :task_has_failed if xcodebuild_test_result == false
     end
   end
 end
