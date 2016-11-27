@@ -37,11 +37,6 @@ module Guard
     end
 
     protected
-
-    def read_args_from_file
-      return unless File.file?(XCODEBUILD_ARGS_FILE)
-      f.read if f = File.open(XCODEBUILD_ARGS_FILE)
-    end
       
     def get_first_project_target_names      
         xcode_projects_in_current_dir.targets.collect(&:name)

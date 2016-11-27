@@ -17,7 +17,7 @@ module Guard
     #
     def initialize(options = {})
       super
-      @file_args = load_args      
+      @file_args = load_args_from_file      
       @args = options[:args]
       @test_paths = options[:test_paths]    || "."
       @test_target = options[:test_target]  || find_test_target
@@ -115,9 +115,10 @@ module Guard
 
     private
 
-    def load_args
-      if json_string = read_args_from_file
-        load_args(json_string)
+    def load_args_from_file
+      return unless File.file?(XCODEBUILD_ARGS_FILE)
+      if json_file = File.open(XCODEBUILD_ARGS_FILE)
+        load_args(json_file.read)
       end
     end
 
