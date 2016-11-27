@@ -28,8 +28,7 @@ module Guard
       targets.find {|f| f =~ /(Spec|Test)s?$/}
     end
 
-    def load_args(json_string)
-      json_string ||= read_args_from_file
+    def load_args(json_string)      
       begin
         args = JSON.parse(json_string)
       rescue          
@@ -37,7 +36,7 @@ module Guard
       parse_args(args) unless args.nil?     
     end
 
-    private
+    protected
 
     def read_args_from_file
       return unless File.file?(XCODEBUILD_ARGS_FILE)

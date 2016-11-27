@@ -115,6 +115,12 @@ module Guard
 
     private
 
+    def load_args
+      if json_string = read_args_from_file
+        load_args(json_string)
+      end
+    end
+
     def find_test_target
       if targets = get_first_project_target_names
         find_test_from_target_names(targets)
