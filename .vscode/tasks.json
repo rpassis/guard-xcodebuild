@@ -1,18 +1,18 @@
 {
     "version": "0.1.0",
-    "command": "sh",
-    "args": ["-c"],
+    "command": "bundle",
+    "args": ["exec"],
     "isShellCommand": true,
     "showOutput": "always",
     "suppressTaskName": true,
     "tasks": [
         {
-            "taskName": "RSpec current file",
-            "args": ["rspec ${file}"]
+            "taskName": "rspec: all",
+            "args": ["rspec"]
         },
         {
-            "taskName": "ls",
-            "args": ["ls"]
+            "taskName": "rspec: current file",
+            "args": ["rspec ${file}"]
         }
     ]
 }
