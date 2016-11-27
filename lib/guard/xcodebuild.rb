@@ -115,6 +115,12 @@ module Guard
 
     private
 
+    def find_test_target
+      if targets = get_first_project_target_names
+        find_test_from_target_names(targets)
+      end
+    end
+
     def xcodebuild_command(command = nil)
       # Pipefail is required so the xcpretty pipe doesnt swallow xcodebuild errors
       commands = ["set -o pipefail; xcodebuild test"]  

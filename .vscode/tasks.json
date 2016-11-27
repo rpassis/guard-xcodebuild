@@ -1,0 +1,18 @@
+{
+    "version": "0.1.0",
+    "command": "sh",
+    "args": ["-c"],
+    "isShellCommand": true,
+    "showOutput": "always",
+    "suppressTaskName": true,
+    "tasks": [
+        {
+            "taskName": "RSpec current file",
+            "args": ["rspec ${file}"]
+        },
+        {
+            "taskName": "ls",
+            "args": ["ls"]
+        }
+    ]
+}

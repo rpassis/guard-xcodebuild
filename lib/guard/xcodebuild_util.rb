@@ -4,7 +4,7 @@ require 'json'
 module Guard
   module XcodebuildUtil
     TEST_FILE_REGEXP = /(Test|Spec)\.(m|swift)$/
-    XCODEBUILD_ARGS = '.xcodebuild-args'
+    XCODEBUILD_ARGS_FILE = '.xcodebuild-args'
     # Find test class from input paths.
     # 
     # - if the path is end with Test.m/Test.mm/Spec.m/Spec.mm, then it is a test class, return the class name of it
@@ -21,6 +21,47 @@ module Guard
         .collect {|path| classname_with_file(path) }
       test_classes = non_test_classes + test_classes
       test_classes.uniq
+    end    
+
+    # Find first project and first Test target from current folder
+    def find_test_from_target_names(targets)
+      targets.find {|f| f =~ /(Spec|Test)s?$/}
+    end
+
+    def load_args(json_string)
+      json_string ||= read_args_from_file
+      begin
+        args = JSON.parse(json_string)
+      rescue          
+      end   
+      parse_args(args) unless args.nil?     
+    end
+
+    private
+
+    def read_args_from_file
+      return unless File.file?(XCODEBUILD_ARGS_FILE)
+      f.read if f = File.open(XCODEBUILD_ARGS_FILE)
+    end
+      
+    def get_first_project_target_names      
+        xcode_projects_in_current_dir.targets.collect(&:name)
+    end
+
+    def xcode_projects_in_current_dir
+      if project_name = Dir["*.xcodeproj"].first
+        Xcodeproj::Project.open(project_name)
+      end
+    end
+
+    # Example "ProjectName/Model/User+CoreDataExtensions.swift"
+    # The first regex strips the file extension and the second removes 
+    # any non alphanumeric characters.
+    # The above example would return UserCoreDataExtensions so if a testing
+    # file named UserCoreDataExtensions(Spec|Test).swift is found, we are
+    # in business
+    def classname_with_file(path)
+      path.split("/").last.gsub(/(\.(.+))$|[^0-9a-z ]/i, "")
     end
 
     # Give a file and a test path, find the test for the given file in the test path.
@@ -38,42 +79,10 @@ module Guard
       return nil
     end
 
-    # Find first project and first Test target from current folder
-    def find_test_target   
-      project_name = Dir["*.xcodeproj"].first
-      if project_name
-        project = Xcodeproj::Project.open(project_name)
-        # find first targets with name ends with Spec(s) or Target(s)
-        return project.targets.collect(&:name).find {|f| f =~ /(Spec|Test)s?$/}
-      end
-    end
-
-    def load_args
-      return unless File.file?(XCODEBUILD_ARGS)
-      if f = File.open(XCODEBUILD_ARGS)
-        args = JSON.parse(f.read)
-        parse_args(args)
-      end
-    end
-
-    protected
-
-    # Example "ProjectName/Model/User+CoreDataExtensions.swift"
-    # The first regex strips the file extension and the second removes 
-    # any non alphanumeric characters.
-    # The above example would return UserCoreDataExtensions so if a testing
-    # file named UserCoreDataExtensions(Spec|Test).swift is found, we are
-    # in business
-    def classname_with_file(path)
-      path.split("/").last.gsub(/(\.(.+))$|[^0-9a-z ]/i, "")
-    end
-
-    private
-
     def parse_args(args)      
       s = ""
       args.keys.each { |k| s = s + "-#{k} #{args[k]} " }
-      return s
+      return s.strip
     end
 
   end
