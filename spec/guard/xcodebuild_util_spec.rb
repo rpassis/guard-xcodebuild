@@ -43,9 +43,7 @@ describe Guard::XcodebuildUtil do
       expect(result).to be(nil)
     end
 
-    it "returns the target names of project in current folder" do
-      pending("Fixtures pending")
-    end
+    # it "returns the target names of project in current folder"
   end
 
   describe "#load_args" do
