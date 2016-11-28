@@ -1,5 +1,5 @@
-require "guard/xcodebuild/version"
 require 'guard/compat/plugin'
+require_relative './xcodebuild/version'
 require_relative './xcodebuild_util'
 
 module Guard
