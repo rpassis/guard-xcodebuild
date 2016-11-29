@@ -1,11 +1,12 @@
 require 'guard/compat/plugin'
 require_relative './xcodebuild/version'
-require_relative './xcodebuild_util'
+require_relative './xcodebuild/notifier'
+require_relative './xcodebuild/options'
+require_relative './xcodebuild/util'
 
 module Guard
   class Xcodebuild < Plugin
-    include XcodebuildUtil
-    attr_reader :test_paths, :test_target, :file_args, :args, :all_on_start, :disable_notifier
+    attr_reader :options, :notifier
 
     # Initializes a Guard plugin.
     # Don't do any work here, especially as Guard plugins get initialized even if they are not in an active group!
@@ -17,13 +18,8 @@ module Guard
     #
     def initialize(options = {})
       super
-      @file_args = load_args_from_file      
-      @args = options[:args]
-      @test_paths = options[:test_paths]    || "."
-      @test_target = options[:test_target]  || find_test_target
-      @all_on_start = options[:all_on_start] || false
-      # @notifier = options[:notifier] || "terminal-notifier"   
-      @disable_notifier = options[:disable_notifier] || false   
+      @options = Options.with_defaults(options)                  
+      @notifier = Notifier.new(@options)   
     end
 
     # Called once when Guard starts. Please override initialize method to init stuff.
@@ -42,12 +38,13 @@ module Guard
       #   throw :task_has_failed
       # end
 
-      unless test_target
+      unless options[:test_target]
         UI.error "Cannot find test target, please specify :test_target option"
         throw :task_has_failed
       end
       
-      run_all if all_on_start      
+      Compat::UI.info "Guard::Xcodebuild is running"
+      run_all if options[:all_on_start]      
     end
 
     # Called when `stop|quit|exit|s|q|e + enter` is pressed (when Guard quits).
@@ -75,7 +72,7 @@ module Guard
     #
     def run_all
       UI.info "Running all tests..."
-      xcodebuild_command
+      _really_run(Util.xcodebuild_command(options))
     end
 
     # Called on file(s) additions that the Guard plugin watches.
@@ -94,14 +91,8 @@ module Guard
     # @return [Object] the task result
     #
     def run_on_modifications(paths)
-      test_files = test_classes_with_paths(paths, test_paths)
-      if test_files.size > 0
-        modified_files = test_files.map { |f| "-only-testing:#{test_target}/#{f}" }.join(",")
-        UI.info "Running tests on classes: #{modified_files}"
-        xcodebuild_command("#{modified_files}")
-      else
-        run_all
-      end
+      UI.info "Running tests on modified paths: #{paths}"      
+      _really_run(Util.xcodebuild_command(options.merge(modified_paths: paths)))
     end
 
     # Called on file(s) removals that the Guard plugin watches.
@@ -113,33 +104,18 @@ module Guard
     def run_on_removals(paths)
     end    
 
-    private
+    private        
 
-    def load_args_from_file
-      return unless File.file?(XCODEBUILD_ARGS_FILE)
-      if json_file = File.open(XCODEBUILD_ARGS_FILE)
-        load_args(json_file.read)
+    def _really_run(command)
+      UI.info("Running: #{command}")
+      result = system(command)
+      if result == true
+        @notifier.notify("All tests passed")
+      else
+        @notifier.notify_failure      
+        throw :task_has_failed
       end
     end
-
-    def find_test_target
-      if targets = get_first_project_target_names
-        find_test_from_target_names(targets)
-      end
-    end
-
-    def xcodebuild_command(command = nil)
-      # Pipefail is required so the xcpretty pipe doesnt swallow xcodebuild errors
-      commands = ["set -o pipefail; xcodebuild test"]  
-      commands << file_args if file_args && file_args.strip != ""
-      commands << args if args && args.strip != ""
-      commands << command if command && command.strip != ""
-      commands << "| xcpretty"
-      final_command = commands.join(" ")
-      UI.info("Running xcodebuild: #{final_command}")
-      xcodebuild_test_result = system(final_command)      
-      throw :task_has_failed if xcodebuild_test_result == false 
-      return xcodebuild_test_result
-    end
+    
   end
 end
